@@ -1,7 +1,8 @@
 /*!
  * Binom.js v0.0.6
  */
-var BinomJS = (function () {
+this.BinomJS = this.BinomJS || {};
+this.BinomJS.detectTimeout = (function () {
   'use strict';
 
   function getClickIdParams() {
@@ -106,53 +107,6 @@ var BinomJS = (function () {
     }, timeoutInSeconds * 1000);
   }
 
-  function detectScroll(tokenName, options) {
-    var isScrolled = false;
-    window.addEventListener('scroll', function () {
-      var _sendTokens;
-
-      if (isScrolled) {
-        return;
-      }
-
-      isScrolled = true;
-      sendTokens((_sendTokens = {}, _sendTokens[tokenName] = '1', _sendTokens), options);
-    });
-  }
-
-  function OptionsStore() {
-    this.domain = window.location.hostname;
-    this.clickAlias = 'click.php';
-
-    this.init = function () {
-      var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          domain = _ref.domain,
-          clickAlias = _ref.clickAlias;
-
-      this.domain = domain !== null && domain !== void 0 ? domain : this.domain;
-      this.clickAlias = clickAlias !== null && clickAlias !== void 0 ? clickAlias : this.clickAlias;
-    };
-
-    this.getOptions = function () {
-      var _optionsToOverride$do, _optionsToOverride$cl;
-
-      var optionsToOverride = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      return {
-        domain: (_optionsToOverride$do = optionsToOverride.domain) !== null && _optionsToOverride$do !== void 0 ? _optionsToOverride$do : this.domain,
-        clickAlias: (_optionsToOverride$cl = optionsToOverride.clickAlias) !== null && _optionsToOverride$cl !== void 0 ? _optionsToOverride$cl : this.clickAlias
-      };
-    };
-  }
-
-  var optionsStore = new OptionsStore();
-
-  var index = {
-    options: optionsStore,
-    sendTokens: sendTokens,
-    detectTimeout: detectTimeout,
-    detectScroll: detectScroll
-  };
-
-  return index;
+  return detectTimeout;
 
 })();
