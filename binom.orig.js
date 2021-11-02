@@ -1,8 +1,3 @@
-
-/*!
- * Binom.js v0.0.4
- */
-
 (function () {
   'use strict';
 
