@@ -1,5 +1,5 @@
 /*!
- * Binom.js v0.0.6
+ * Binom.js v0.0.7
  */
 this.BinomJS = this.BinomJS || {};
 this.BinomJS.wrapUrlWithClickId = (function () {
@@ -15,7 +15,7 @@ this.BinomJS.wrapUrlWithClickId = (function () {
     return matchedList.reduce(function (summary, matched) {
       var _Object$assign;
 
-      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[matched[1]] = "".concat(matched[1], "=").concat(matched[2]), _Object$assign));
+      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[matched[1]] = "".concat(matched[2]), _Object$assign));
     }, {});
   }
 

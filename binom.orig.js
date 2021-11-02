@@ -1,5 +1,5 @@
 /*!
- * Binom.js v0.0.6
+ * Binom.js v0.0.7
  */
 var BinomJS = (function () {
   'use strict';
@@ -14,7 +14,7 @@ var BinomJS = (function () {
     return matchedList.reduce(function (summary, matched) {
       var _Object$assign;
 
-      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[matched[1]] = "".concat(matched[1], "=").concat(matched[2]), _Object$assign));
+      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[matched[1]] = "".concat(matched[2]), _Object$assign));
     }, {});
   }
 
@@ -64,12 +64,49 @@ var BinomJS = (function () {
     });
   }
 
-  function stringifyTokens(tokens, context) {
+  function stringifyTokens(tokens) {
     return Object.keys(tokens).map(function (tokenName) {
-      var valueOrFunction = tokens[tokenName];
-      var value = typeof valueOrFunction === 'function' ? valueOrFunction(context) : valueOrFunction;
-      return "".concat(tokenName, "=").concat(value);
+      return "".concat(tokenName, "=").concat(tokens[tokenName]);
     }).join('&');
+  }
+
+  function resolveTokens(tokens, context) {
+    var resultTokens = {};
+    var promises = [];
+    Object.keys(tokens).forEach(function (tokenName) {
+      var valueOrFunction = tokens[tokenName];
+
+      if (typeof valueOrFunction !== 'function') {
+        resultTokens[tokenName] = valueOrFunction;
+        return;
+      }
+
+      var result = valueOrFunction(context);
+
+      if (!(result instanceof Promise)) {
+        resultTokens[tokenName] = result;
+        return;
+      }
+
+      promises.push(result);
+      result.then(function (finalResult) {
+        resultTokens[tokenName] = finalResult;
+      });
+    });
+
+    if (promises.length === 0) {
+      return {
+        then: function then(callback) {
+          callback(resultTokens);
+        }
+      };
+    }
+
+    return new Promise(function (resolve) {
+      return Promise.all(promises).then(function () {
+        resolve(resultTokens);
+      });
+    });
   }
 
   function getOptions(options) {
@@ -82,20 +119,42 @@ var BinomJS = (function () {
     return BinomJS.options.getOptions(options);
   }
 
-  function makeRequestUrl(tokens, context, options) {
+  function makeRequestUrl(tokens, options) {
     var _getOptions = getOptions(options),
-        domain = _getOptions.domain,
+        host = _getOptions.host,
         clickAlias = _getOptions.clickAlias;
 
-    var baseUrl = "https://".concat(domain, "/").concat(clickAlias);
-    var query = stringifyTokens(passClickIdToSendingTokens(tokens), context);
+    var baseUrl = "https://".concat([host, clickAlias].join('/').replace(/\/{2,}/g, '/'));
+    var query = stringifyTokens(tokens);
     return "".concat(baseUrl, "?").concat(query);
   }
 
   function sendTokens(tokens, context, options) {
-    var image = document.createElement('img');
-    image.src = makeRequestUrl(tokens, context, options);
-    image.referrerPolicy = 'no-referrer-when-downgrade';
+    resolveTokens(passClickIdToSendingTokens(tokens), context).then(function (resultTokens) {
+      var image = document.createElement('img');
+      image.src = makeRequestUrl(resultTokens, options);
+      image.referrerPolicy = 'no-referrer-when-downgrade';
+    });
+  }
+
+  function normalizeTokens(tokensOrTokenName) {
+    if (typeof tokensOrTokenName === 'string') {
+      var _ref2;
+
+      return _ref2 = {}, _ref2[tokensOrTokenName] = function (_ref) {
+        var isMobile = _ref.isMobile;
+        return isMobile ? 1 : 0;
+      }, _ref2;
+    }
+
+    return tokensOrTokenName;
+  }
+
+  function detectMobile(tokensOrTokenName, options) {
+    var isMobile = typeof window.orientation !== 'undefined';
+    sendTokens(normalizeTokens(tokensOrTokenName), {
+      isMobile: isMobile
+    }, options);
   }
 
   function detectTimeout(tokenName, timeoutInSeconds, options) {
@@ -121,24 +180,24 @@ var BinomJS = (function () {
   }
 
   function OptionsStore() {
-    this.domain = window.location.hostname;
+    this.host = window.location.hostname;
     this.clickAlias = 'click.php';
 
     this.init = function () {
       var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          domain = _ref.domain,
+          host = _ref.host,
           clickAlias = _ref.clickAlias;
 
-      this.domain = domain !== null && domain !== void 0 ? domain : this.domain;
+      this.host = host !== null && host !== void 0 ? host : this.host;
       this.clickAlias = clickAlias !== null && clickAlias !== void 0 ? clickAlias : this.clickAlias;
     };
 
     this.getOptions = function () {
-      var _optionsToOverride$do, _optionsToOverride$cl;
+      var _optionsToOverride$ho, _optionsToOverride$cl;
 
       var optionsToOverride = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       return {
-        domain: (_optionsToOverride$do = optionsToOverride.domain) !== null && _optionsToOverride$do !== void 0 ? _optionsToOverride$do : this.domain,
+        host: (_optionsToOverride$ho = optionsToOverride.host) !== null && _optionsToOverride$ho !== void 0 ? _optionsToOverride$ho : this.host,
         clickAlias: (_optionsToOverride$cl = optionsToOverride.clickAlias) !== null && _optionsToOverride$cl !== void 0 ? _optionsToOverride$cl : this.clickAlias
       };
     };
@@ -148,8 +207,12 @@ var BinomJS = (function () {
 
   var index = {
     options: optionsStore,
+    init: function init(options) {
+      optionsStore.init(options);
+    },
     sendTokens: sendTokens,
     detectTimeout: detectTimeout,
+    detectMobile: detectMobile,
     detectScroll: detectScroll
   };
 

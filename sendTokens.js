@@ -1,5 +1,5 @@
 /*!
- * Binom.js v0.0.6
+ * Binom.js v0.0.7
  */
 this.BinomJS = this.BinomJS || {};
 this.BinomJS.sendTokens = (function () {
@@ -15,7 +15,7 @@ this.BinomJS.sendTokens = (function () {
     return matchedList.reduce(function (summary, matched) {
       var _Object$assign;
 
-      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[matched[1]] = "".concat(matched[1], "=").concat(matched[2]), _Object$assign));
+      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[matched[1]] = "".concat(matched[2]), _Object$assign));
     }, {});
   }
 
@@ -65,12 +65,49 @@ this.BinomJS.sendTokens = (function () {
     });
   }
 
-  function stringifyTokens(tokens, context) {
+  function stringifyTokens(tokens) {
     return Object.keys(tokens).map(function (tokenName) {
-      var valueOrFunction = tokens[tokenName];
-      var value = typeof valueOrFunction === 'function' ? valueOrFunction(context) : valueOrFunction;
-      return "".concat(tokenName, "=").concat(value);
+      return "".concat(tokenName, "=").concat(tokens[tokenName]);
     }).join('&');
+  }
+
+  function resolveTokens(tokens, context) {
+    var resultTokens = {};
+    var promises = [];
+    Object.keys(tokens).forEach(function (tokenName) {
+      var valueOrFunction = tokens[tokenName];
+
+      if (typeof valueOrFunction !== 'function') {
+        resultTokens[tokenName] = valueOrFunction;
+        return;
+      }
+
+      var result = valueOrFunction(context);
+
+      if (!(result instanceof Promise)) {
+        resultTokens[tokenName] = result;
+        return;
+      }
+
+      promises.push(result);
+      result.then(function (finalResult) {
+        resultTokens[tokenName] = finalResult;
+      });
+    });
+
+    if (promises.length === 0) {
+      return {
+        then: function then(callback) {
+          callback(resultTokens);
+        }
+      };
+    }
+
+    return new Promise(function (resolve) {
+      return Promise.all(promises).then(function () {
+        resolve(resultTokens);
+      });
+    });
   }
 
   function getOptions(options) {
@@ -83,20 +120,22 @@ this.BinomJS.sendTokens = (function () {
     return BinomJS.options.getOptions(options);
   }
 
-  function makeRequestUrl(tokens, context, options) {
+  function makeRequestUrl(tokens, options) {
     var _getOptions = getOptions(options),
-        domain = _getOptions.domain,
+        host = _getOptions.host,
         clickAlias = _getOptions.clickAlias;
 
-    var baseUrl = "https://".concat(domain, "/").concat(clickAlias);
-    var query = stringifyTokens(passClickIdToSendingTokens(tokens), context);
+    var baseUrl = "https://".concat([host, clickAlias].join('/').replace(/\/{2,}/g, '/'));
+    var query = stringifyTokens(tokens);
     return "".concat(baseUrl, "?").concat(query);
   }
 
   function sendTokens(tokens, context, options) {
-    var image = document.createElement('img');
-    image.src = makeRequestUrl(tokens, context, options);
-    image.referrerPolicy = 'no-referrer-when-downgrade';
+    resolveTokens(passClickIdToSendingTokens(tokens), context).then(function (resultTokens) {
+      var image = document.createElement('img');
+      image.src = makeRequestUrl(resultTokens, options);
+      image.referrerPolicy = 'no-referrer-when-downgrade';
+    });
   }
 
   return sendTokens;
