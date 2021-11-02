@@ -1,6 +1,6 @@
 
 /*!
- * Binom.js v0.0.4
+ * Binom.js v0.0.5
  */
 
 (function () {
