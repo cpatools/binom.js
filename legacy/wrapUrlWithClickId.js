@@ -5,34 +5,80 @@ this.BinomJS = this.BinomJS || {};
 this.BinomJS.wrapUrlWithClickId = (function () {
   'use strict';
 
-  function getClickIdParams() {
-    var matchedList = Array.from(location.search.matchAll(/[?&](clickid|uclick)=([^=&]*)/g));
+  function extractClickIdParamsFromCookies$1() {
+    var uclickFieldName = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'uclick';
+    return Array.from(document.cookie.matchAll(new RegExp("(?:^|; )(clickid|".concat(uclickFieldName, ")=([^;]*)"), 'g'))).map(function (matched) {
+      return {
+        name: matched[1],
+        value: matched[2]
+      };
+    });
+  }
 
-    if (matchedList.length === 0) {
-      return null;
+  function extractClickIdParamsFromCookies(url) {
+    var _url$match;
+
+    var uclickFieldName = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'uclick';
+    var searchString = (_url$match = url.match(/\?.+?$/)) === null || _url$match === void 0 ? void 0 : _url$match[0];
+
+    if (!searchString) {
+      return [];
     }
 
-    return matchedList.reduce(function (summary, matched) {
+    return Array.from(searchString.matchAll(new RegExp("[?&](clickid|".concat(uclickFieldName, ")=([^=&]*)"), 'g'))).map(function (matched) {
+      return {
+        name: matched[1],
+        value: matched[2]
+      };
+    });
+  }
+
+  function getClickIdParams(extractor) {
+    var extractedClickIdsList = extractor();
+
+    if (extractedClickIdsList.length === 0) {
+      return {};
+    }
+
+    return extractedClickIdsList.reduce(function (summary, extractedClickId) {
       var _Object$assign;
 
-      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[matched[1]] = "".concat(matched[2]), _Object$assign));
+      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[extractedClickId.name] = "".concat(extractedClickId.value), _Object$assign));
     }, {});
   }
 
-  function chooseClickIdTokenName(clickIdParams, priority) {
-    if (clickIdParams[priority]) {
-      return priority;
-    }
-
-    return Object.keys(clickIdParams)[0];
+  function pairs(listLeft, listRight) {
+    return listLeft.reduce(function (summary, itemFromListLeft) {
+      return summary.concat(listRight.map(function (itemFromListRight) {
+        return [itemFromListLeft, itemFromListRight];
+      }));
+    }, []);
   }
 
-  function chooseClickIdToken(clickIdParams, priority) {
-    var name = chooseClickIdTokenName(clickIdParams, priority);
-    return {
-      name: name,
-      value: clickIdParams[name]
-    };
+  function getClickIdToken() {
+    var _pairs$map$find;
+
+    var uclickFieldName = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'uclick';
+    var clickIdCookies = getClickIdParams(function () {
+      return extractClickIdParamsFromCookies$1(uclickFieldName);
+    });
+    var clickIdReferrerParams = getClickIdParams(function () {
+      return extractClickIdParamsFromCookies(document.referrer, uclickFieldName);
+    });
+    var clickIdGetParams = getClickIdParams(function () {
+      return extractClickIdParamsFromCookies(document.location.search, uclickFieldName);
+    });
+    var fields = [uclickFieldName, 'clickid'];
+    var sources = [clickIdCookies, clickIdReferrerParams, clickIdGetParams];
+    return (_pairs$map$find = pairs(fields, sources).map(function (pair) {
+      return {
+        name: pair[0],
+        value: pair[1][pair[0]]
+      };
+    }).find(function (_ref) {
+      var value = _ref.value;
+      return value;
+    })) !== null && _pairs$map$find !== void 0 ? _pairs$map$find : null;
   }
 
   function appendParam(url, paramName, value) {
@@ -61,25 +107,26 @@ this.BinomJS.wrapUrlWithClickId = (function () {
   }
 
   function wrapUrlWithClickId(url) {
-    var clickIdParams = getClickIdParams();
+    var uclickFieldName = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'uclick';
+    var clickIdToken = getClickIdToken(uclickFieldName);
 
-    if (clickIdParams === null) {
+    if (clickIdToken === null) {
       return url;
     }
 
     if (!url.includes('cnv_id')) {
-      var _chooseClickIdToken = chooseClickIdToken(clickIdParams, 'uclick'),
-          clickIdTokenName = _chooseClickIdToken.name,
-          clickIdTokenValue = _chooseClickIdToken.value;
-
-      return setParam(url, clickIdTokenName, clickIdTokenValue);
+      return setParam(url, clickIdToken.name, clickIdToken.value);
     }
 
-    if (clickIdParams.uclick) {
-      return setParam(url, 'uclick', clickIdParams.uclick);
+    if (clickIdToken.name === uclickFieldName) {
+      return setParam(url, clickIdToken.name, clickIdToken.value);
     }
 
-    return setParam(url, 'cnv_id', clickIdParams.clickid);
+    if (clickIdToken.value) {
+      return setParam(url, 'cnv_id', clickIdToken.value);
+    }
+
+    return url;
   }
 
   return wrapUrlWithClickId;
