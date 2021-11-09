@@ -1,5 +1,5 @@
 /*!
- * Binom.js v0.0.8
+ * Binom.js v0.0.9
  */
 this.BinomJS = this.BinomJS || {};
 this.BinomJS.sendTokens = (function () {
