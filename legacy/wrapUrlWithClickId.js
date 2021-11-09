@@ -43,7 +43,7 @@ this.BinomJS.wrapUrlWithClickId = (function () {
     return extractedClickIdsList.reduce(function (summary, extractedClickId) {
       var _Object$assign;
 
-      return Object.assign(Object.assign({}, summary), {}, (_Object$assign = {}, _Object$assign[extractedClickId.name] = "".concat(extractedClickId.value), _Object$assign));
+      return Object.assign(summary, (_Object$assign = {}, _Object$assign[extractedClickId.name] = "".concat(extractedClickId.value), _Object$assign));
     }, {});
   }
 
@@ -56,8 +56,6 @@ this.BinomJS.wrapUrlWithClickId = (function () {
   }
 
   function getClickIdToken() {
-    var _pairs$map$find;
-
     var uclickFieldName = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'uclick';
     var clickIdCookies = getClickIdParams(function () {
       return extractClickIdParamsFromCookies$1(uclickFieldName);
@@ -70,15 +68,14 @@ this.BinomJS.wrapUrlWithClickId = (function () {
     });
     var fields = [uclickFieldName, 'clickid'];
     var sources = [clickIdCookies, clickIdReferrerParams, clickIdGetParams];
-    return (_pairs$map$find = pairs(fields, sources).map(function (pair) {
+    return pairs(fields, sources).map(function (pair) {
       return {
         name: pair[0],
         value: pair[1][pair[0]]
       };
-    }).find(function (_ref) {
-      var value = _ref.value;
-      return value;
-    })) !== null && _pairs$map$find !== void 0 ? _pairs$map$find : null;
+    }).find(function (pair) {
+      return pair.value;
+    }) || null;
   }
 
   function appendParam(url, paramName, value) {
