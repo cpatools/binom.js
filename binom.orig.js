@@ -1,5 +1,5 @@
 /*!
- * Binom.js v0.0.7
+ * Binom.js v0.0.8
  */
 var BinomJS = (function () {
   'use strict';

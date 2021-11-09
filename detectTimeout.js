@@ -1,5 +1,5 @@
 /*!
- * Binom.js v0.0.7
+ * Binom.js v0.0.8
  */
 this.BinomJS = this.BinomJS || {};
 this.BinomJS.detectTimeout = (function () {
